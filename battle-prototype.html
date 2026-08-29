@@ -1,0 +1,649 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Battle System Prototype</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --surface: #f7f7f8;
+    --surface-2: #efeff1;
+    --border: #e2e2e5;
+    --text: #1a1a1c;
+    --text-soft: #6b6b70;
+    --ally-bg: #eaf5ee;
+    --ally-border: #bfe0cc;
+    --ally-text: #22694a;
+    --enemy-bg: #fbeceb;
+    --enemy-border: #f0c6c3;
+    --enemy-text: #a83f37;
+    --accent: #1a1a1c;
+    --accent-text: #ffffff;
+    --mono: ui-monospace, "SF Mono", Menlo, Consolas, "Roboto Mono", monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .container {
+    max-width: 760px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 24px 20px 80px;
+  }
+
+  header h1 {
+    font-size: 20px;
+    font-weight: 600;
+    margin: 0 0 2px;
+  }
+
+  header p {
+    margin: 0 0 20px;
+    color: var(--text-soft);
+    font-size: 13px;
+  }
+
+  /* Tabs */
+  .tabs {
+    display: flex;
+    gap: 4px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 24px;
+  }
+
+  .tab-btn {
+    appearance: none;
+    background: none;
+    border: none;
+    padding: 10px 14px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-soft);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+  }
+
+  .tab-btn:hover { color: var(--text); }
+
+  .tab-btn.active {
+    color: var(--text);
+    border-bottom-color: var(--accent);
+  }
+
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* Sections */
+  .section {
+    margin-bottom: 32px;
+  }
+
+  .section-title {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-soft);
+    margin: 0 0 10px;
+  }
+
+  .subgroup {
+    margin-bottom: 18px;
+  }
+
+  .subgroup-title {
+    font-size: 13px;
+    font-weight: 600;
+    margin: 0 0 8px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 10px;
+  }
+
+  /* Character cards */
+  .char-card {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    border-radius: 10px;
+    padding: 12px 14px;
+  }
+
+  .char-card.ally { border-top: 3px solid var(--ally-border); }
+  .char-card.enemy { border-top: 3px solid var(--enemy-border); }
+
+  .char-card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+
+  .char-name {
+    font-weight: 600;
+    font-size: 14px;
+  }
+
+  .badge {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    padding: 2px 6px;
+    border-radius: 999px;
+  }
+
+  .badge.ally { background: var(--ally-bg); color: var(--ally-text); }
+  .badge.enemy { background: var(--enemy-bg); color: var(--enemy-text); }
+
+  .stat-list {
+    list-style: none;
+    margin: 0 0 10px;
+    padding: 0;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text);
+  }
+
+  .stat-list li {
+    display: flex;
+    justify-content: space-between;
+    padding: 2px 0;
+    border-bottom: 1px dashed var(--surface-2);
+  }
+
+  .stat-list li span:first-child { color: var(--text-soft); }
+
+  .roll-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .roll-result {
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    min-width: 18px;
+    text-align: center;
+  }
+
+  /* Buttons */
+  button {
+    font-family: var(--sans);
+    cursor: pointer;
+  }
+
+  .btn {
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 7px;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+
+  .btn:hover { background: #e6e6e9; }
+
+  .btn.primary {
+    background: var(--accent);
+    color: var(--accent-text);
+    border-color: var(--accent);
+  }
+
+  .btn.primary:hover { opacity: 0.85; }
+
+  .btn.small { padding: 4px 10px; font-size: 11px; }
+
+  /* Function cards */
+  .fn-card {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+  }
+
+  .fn-card-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 4px;
+  }
+
+  .fn-name {
+    font-weight: 600;
+    font-size: 14px;
+  }
+
+  .fn-desc {
+    color: var(--text-soft);
+    font-size: 12px;
+    margin: 0 0 8px;
+    line-height: 1.4;
+  }
+
+  .fn-output {
+    font-family: var(--mono);
+    font-size: 11.5px;
+    background: var(--surface-2);
+    border-radius: 6px;
+    padding: 8px 10px;
+    white-space: pre-wrap;
+    color: var(--text);
+    display: none;
+  }
+
+  .fn-output.visible { display: block; }
+
+  /* Game tab */
+  .game-controls {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+  }
+
+  .turn-order {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--text-soft);
+    margin-bottom: 16px;
+    padding: 10px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+
+  .turn-order strong { color: var(--text); }
+
+  .feed {
+    border: 1px solid var(--border);
+    background: var(--surface);
+    border-radius: 10px;
+    height: 380px;
+    overflow-y: auto;
+    padding: 10px 12px;
+    font-family: var(--mono);
+    font-size: 12.5px;
+  }
+
+  .feed-entry {
+    padding: 5px 0;
+    border-bottom: 1px dashed var(--surface-2);
+    line-height: 1.5;
+  }
+
+  .feed-entry:last-child { border-bottom: none; }
+
+  .feed-round {
+    color: var(--text-soft);
+    margin-right: 6px;
+  }
+
+  .feed-empty {
+    color: var(--text-soft);
+    font-style: italic;
+  }
+
+  @media (max-width: 480px) {
+    .card-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <h1>💖 MDG Battle System Prototype</h1>
+  </header>
+
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="setup">Set Up</button>
+    <button class="tab-btn" data-tab="game">The Game</button>
+  </div>
+
+  <!-- SETUP TAB -->
+  <div class="tab-panel active" id="tab-setup">
+
+    <div class="section">
+      <p class="section-title">Characters</p>
+
+      <div class="subgroup">
+        <p class="subgroup-title">🟢 Good Characters</p>
+        <div class="card-grid" id="allyCards"></div>
+      </div>
+
+      <div class="subgroup">
+        <p class="subgroup-title">🔴 Enemies</p>
+        <div class="card-grid" id="enemyCards"></div>
+      </div>
+    </div>
+
+    <div class="section">
+      <p class="section-title">Functions</p>
+      <div id="fnCards"></div>
+    </div>
+
+  </div>
+
+  <!-- GAME TAB -->
+  <div class="tab-panel" id="tab-game">
+
+    <div class="game-controls">
+      <button class="btn primary" id="startGameBtn">Start Game</button>
+      <button class="btn" id="rollRoundBtn">Roll / Next Step</button>
+      <button class="btn" id="resetGameBtn">Reset</button>
+    </div>
+
+    <div class="turn-order" id="turnOrderDisplay">
+      Turn order not set yet. Click <strong>Start Game</strong>.
+    </div>
+
+    <div class="feed" id="feed">
+      <div class="feed-empty">Game log will appear here...</div>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+/* ============================================================
+   CHARACTER DATA
+   Add / edit characters here. Any key inside `stats` will
+   automatically render as a row on that character's card, so
+   you can add new variables (e.g. mana, crit, resist) freely.
+   ============================================================ */
+let characters = [
+  {
+    id: 'emma',
+    name: 'Emma',
+    isEnemy: false,
+    stats: { hp: 50, atk: 15, def: 5, spd: 10, lvl: 1, exp: 0},
+    lastRoll: null
+  },
+  {
+    id: 'deathlight',
+    name: 'Deathlight',
+    isEnemy: false,
+    stats: { hp: 50, atk: 25, def: 5, spd: 10},
+    lastRoll: null
+  },
+  {
+    id: 'mourningrosary',
+    name: 'Mourning Rosary',
+    isEnemy: false,
+    stats: { hp: 50, atk: 20, def: 5, spd: 10},
+    lastRoll: null
+  },
+  {
+    id: 'deada',
+    name: 'Dead A',
+    isEnemy: true,
+    stats: { hp: 100, atk: 10, def: 10, spd: 10, exp: 5},
+    lastRoll: null
+  },
+  {
+    id: 'deadb',
+    name: 'Dead B',
+    isEnemy: true,
+    stats: { hp: 100, atk: 10, def: 10, spd: 10, exp: 5},
+    lastRoll: null
+  }
+];
+
+/* ============================================================
+   GAME FUNCTIONS
+   These are the equations that drive the battle logic. Each
+   function receives the live `characters` array (plus a helper
+   `log(msg)` to write to the game feed) and can return whatever
+   you want. Wire these up from the "Roll / Next Step" button in
+   the Game tab, or test them individually from the Setup tab.
+   Replace / expand these placeholders with your real rules.
+   ============================================================ */
+const gameFunctions = {
+
+  turnOrder: {
+    label: 'Determine Turn Order',
+    description: 'Sorts all characters by SPD descending. Ties are broken with a d6 roll per character.',
+    run: (chars) => {
+      const withTiebreak = chars.map(c => ({
+        ...c,
+        tiebreak: rollDie()
+      }));
+      withTiebreak.sort((a, b) => (b.stats.spd - a.stats.spd) || (b.tiebreak - a.tiebreak));
+      return withTiebreak.map(c => c.id);
+    }
+  },
+
+  basicAttack: {
+    label: 'Basic Attack (example)',
+    description: 'damage = attacker.atk + d6 roll − defender.def, minimum 0. Uses first ally vs first enemy as a sample.',
+    run: (chars) => {
+      const attacker = chars.find(c => !c.isEnemy);
+      const defender = chars.find(c => c.isEnemy);
+      if (!attacker || !defender) return ['Need at least one ally and one enemy to test this.'];
+      const roll = rollDie();
+      const raw = attacker.stats.atk + roll - defender.stats.def;
+      const damage = Math.max(0, raw);
+      return [
+        `${attacker.name} attacks ${defender.name}`,
+        `atk(${attacker.stats.atk}) + roll(${roll}) − def(${defender.stats.def}) = ${damage} damage`
+      ];
+    }
+  }
+
+  // Add more functions here, e.g. checkDefeat, applyStatus, enemyAI, etc.
+
+};
+
+/* ============================================================
+   STATE
+   ============================================================ */
+let gameState = {
+  round: 0,
+  turnOrder: [],
+  started: false,
+  turn: 0
+};
+
+/* ============================================================
+   HELPERS
+   ============================================================ */
+function rollDie() {
+  return Math.floor(Math.random() * 6) + 1;
+}
+
+function getCharacter(id) {
+  return characters.find(c => c.id === id);
+}
+
+function logToFeed(message, opts = {}) {
+  const feed = document.getElementById('feed');
+  const empty = feed.querySelector('.feed-empty');
+  if (empty) empty.remove();
+
+  const entry = document.createElement('div');
+  entry.className = 'feed-entry';
+  const roundLabel = opts.round !== undefined ? opts.round : gameState.round;
+  entry.innerHTML = `<span class="feed-round">[R${roundLabel}]</span>${message}`;
+  feed.appendChild(entry);
+  feed.scrollTop = feed.scrollHeight;
+}
+
+/* ============================================================
+   RENDER: CHARACTER CARDS
+   ============================================================ */
+function renderCharacterCards() {
+  const allyContainer = document.getElementById('allyCards');
+  const enemyContainer = document.getElementById('enemyCards');
+  allyContainer.innerHTML = '';
+  enemyContainer.innerHTML = '';
+
+  characters.forEach(char => {
+    const card = document.createElement('div');
+    card.className = `char-card ${char.isEnemy ? 'enemy' : 'ally'}`;
+
+    const statRows = Object.entries(char.stats)
+      .map(([key, val]) => `<li><span>${key}</span><span>${val}</span></li>`)
+      .join('');
+
+    card.innerHTML = `
+      <div class="char-card-head">
+        <span class="char-name">${char.name}</span>
+        <span class="badge ${char.isEnemy ? 'enemy' : 'ally'}">${char.isEnemy ? 'Enemy' : 'Ally'}</span>
+      </div>
+      <ul class="stat-list">${statRows}</ul>
+      <div class="roll-row">
+        <button class="btn small" data-roll-id="${char.id}">Roll d6</button>
+        <span class="roll-result" id="roll-${char.id}">${char.lastRoll ?? '–'}</span>
+      </div>
+    `;
+
+    (char.isEnemy ? enemyContainer : allyContainer).appendChild(card);
+  });
+
+  document.querySelectorAll('[data-roll-id]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const char = getCharacter(btn.dataset.rollId);
+      char.lastRoll = rollDie();
+      document.getElementById(`roll-${char.id}`).textContent = char.lastRoll;
+    });
+  });
+}
+
+/* ============================================================
+   RENDER: FUNCTION CARDS
+   ============================================================ */
+function renderFunctionCards() {
+  const container = document.getElementById('fnCards');
+  container.innerHTML = '';
+
+  Object.entries(gameFunctions).forEach(([key, fn]) => {
+    const card = document.createElement('div');
+    card.className = 'fn-card';
+    card.innerHTML = `
+      <div class="fn-card-head">
+        <span class="fn-name">${fn.label}</span>
+        <button class="btn small" data-fn-key="${key}">Run test</button>
+      </div>
+      <p class="fn-desc">${fn.description}</p>
+      <div class="fn-output" id="fn-output-${key}"></div>
+    `;
+    container.appendChild(card);
+  });
+
+  document.querySelectorAll('[data-fn-key]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const key = btn.dataset.fnKey;
+      const output = gameFunctions[key].run(characters);
+      const outEl = document.getElementById(`fn-output-${key}`);
+      outEl.textContent = Array.isArray(output) ? output.join('\n') : String(output);
+      outEl.classList.add('visible');
+      renderCharacterCards(); // reflect any tiebreak rolls, etc.
+    });
+  });
+}
+
+/* ============================================================
+   GAME TAB LOGIC
+   ============================================================ */
+function startGame() {
+  gameState.round = 1;
+  gameState.started = true;
+
+  const orderResult = gameFunctions.turnOrder.run(characters);
+  gameState.turnOrder = orderResult;
+  console.log(gameState.turnOrder);
+
+  document.getElementById('turnOrderDisplay').innerHTML =
+    `<strong>Turn order:</strong> ${orderResult.map(o => o.split(' (')[0]).join(' → ')}`;
+
+  logToFeed('Game started.', { round: gameState.round });
+  orderResult.forEach(line => logToFeed(line, { round: gameState.round }));
+
+  renderCharacterCards();
+}
+
+function rollRound() {
+  if (!gameState.started) {
+    logToFeed('Click "Start Game" first to set turn order.', { round: gameState.round });
+    return;
+  }
+
+
+
+  // Placeholder round logic — replace with your real per-round rules.
+  // This currently just runs the example basic attack function so
+  // there is something visible to click through while prototyping.
+
+
+  const result = gameFunctions.basicAttack.run(characters);
+  result.forEach(line => logToFeed(line, { round: gameState.round }));
+
+  gameState.round += 1;
+  gameState.turn = gameState.turn < 4 ? gameState.turn + 1 : 0;
+  renderCharacterCards();
+  console.log(gameState.turn);
+}
+
+function resetGame() {
+  gameState = { round: 0, turnOrder: [], started: false };
+  document.getElementById('turnOrderDisplay').innerHTML =
+    'Turn order not set yet. Click <strong>Start Game</strong>.';
+  document.getElementById('feed').innerHTML = '<div class="feed-empty">Game log will appear here...</div>';
+  characters.forEach(c => c.lastRoll = null);
+  renderCharacterCards();
+}
+
+/* ============================================================
+   TABS
+   ============================================================ */
+function setupTabs() {
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById(`tab-${btn.dataset.tab}`).classList.add('active');
+    });
+  });
+}
+
+/* ============================================================
+   INIT
+   ============================================================ */
+function init() {
+  renderCharacterCards();
+  renderFunctionCards();
+  setupTabs();
+
+  document.getElementById('startGameBtn').addEventListener('click', startGame);
+  document.getElementById('rollRoundBtn').addEventListener('click', rollRound);
+  document.getElementById('resetGameBtn').addEventListener('click', resetGame);
+}
+
+init();
+</script>
+
+</body>
+</html>
