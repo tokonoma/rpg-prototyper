@@ -275,28 +275,173 @@
 
   .turn-order strong { color: var(--text); }
 
+  .game-layout {
+    display: grid;
+    grid-template-columns: 1fr 200px;
+    gap: 14px;
+    align-items: start;
+  }
+
   .feed {
     border: 1px solid var(--border);
-    background: var(--surface);
+    background: var(--surface-2);
     border-radius: 10px;
     height: 380px;
     overflow-y: auto;
-    padding: 10px 12px;
+    padding: 10px;
     font-family: var(--mono);
     font-size: 12.5px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
   }
 
   .feed-entry {
-    padding: 5px 0;
-    border-bottom: 1px dashed var(--surface-2);
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 8px 10px;
     line-height: 1.5;
   }
-
-  .feed-entry:last-child { border-bottom: none; }
 
   .feed-round {
     color: var(--text-soft);
     margin-right: 6px;
+  }
+
+  /* Roster (right column, Game tab) */
+  .roster {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 380px;
+    overflow-y: auto;
+  }
+
+  .mini-card {
+    position: relative;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    border-radius: 8px;
+    padding: 8px 10px;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+  }
+
+  .mini-card.ally { border-top: 3px solid var(--ally-border); }
+  .mini-card.enemy { border-top: 3px solid var(--enemy-border); }
+
+  .mini-card-name {
+    font-weight: 600;
+    font-size: 12.5px;
+    margin-bottom: 6px;
+    padding-right: 40px;
+  }
+
+  .hp-bar-track {
+    background: var(--surface-2);
+    border-radius: 999px;
+    height: 6px;
+    overflow: hidden;
+    margin-bottom: 4px;
+  }
+
+  .hp-bar-fill {
+    height: 100%;
+    background: var(--ally-text);
+    border-radius: 999px;
+    transition: width 0.2s ease;
+  }
+
+  .mini-card.enemy .hp-bar-fill { background: var(--enemy-text); }
+
+  .hp-text {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--text-soft);
+  }
+
+  /* Dead state */
+  .mini-card.dead {
+    background: #26262a;
+    border-color: #26262a;
+  }
+
+  .mini-card.dead .mini-card-name { color: #f2f2f2; }
+  .mini-card.dead .hp-text { color: #9a9aa0; }
+  .mini-card.dead .hp-bar-track { background: #3a3a3f; }
+  .mini-card.dead .hp-bar-fill { background: #6b6b70; }
+
+  .dead-badge {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    padding: 2px 6px;
+    border-radius: 999px;
+    background: #000000;
+    color: #ffffff;
+  }
+
+  .choice-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.choice-label {
+  font-weight: 600;
+}
+
+.choice-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.choice-btn {
+  font-family: var(--sans);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  display: inline-block;
+  color: var(--text);
+  border-radius: 7px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  margin-right: 8px;
+}
+
+.choice-btn:hover:not(:disabled) {
+  border-color: var(--text);
+}
+
+.choice-btn:disabled {
+  cursor: default;
+  opacity: 0.4;
+}
+
+/* the one that was actually picked, kept visible after locking */
+.choice-btn.selected {
+  background: var(--accent);
+  color: var(--accent-text);
+  border-color: var(--accent);
+  opacity: 1;
+}
+
+/* the whole prompt card once a choice has been made */
+.feed-entry.locked .choice-label::after {
+  content: " ✓";
+  color: var(--ally-text);
+}
+
+  @media (max-width: 640px) {
+    .game-layout { grid-template-columns: 1fr; }
+    .roster { max-height: none; flex-direction: row; flex-wrap: wrap; }
+    .roster .mini-card { flex: 1 1 140px; }
   }
 
   .feed-empty {
@@ -358,8 +503,12 @@
       Turn order not set yet. Click <strong>Start Game</strong>.
     </div>
 
-    <div class="feed" id="feed">
-      <div class="feed-empty">Game log will appear here...</div>
+    <div class="game-layout">
+      <div class="feed" id="feed">
+        <div class="feed-empty">Game log will appear here...</div>
+      </div>
+
+      <div class="roster" id="gameRoster"></div>
     </div>
 
   </div>
@@ -379,35 +528,44 @@ let characters = [
     name: 'Emma',
     isEnemy: false,
     stats: { hp: 50, atk: 15, def: 5, spd: 10, lvl: 1, exp: 0},
-    lastRoll: null
+    lastRoll: null,
+    currentHp: 50,
+    abilities: ["Attack", "Go into Death", "Mend", "Item"],
+    items: [{name: "potion", count: 2}]
   },
   {
     id: 'deathlight',
     name: 'Deathlight',
     isEnemy: false,
     stats: { hp: 50, atk: 25, def: 5, spd: 10},
-    lastRoll: null
+    lastRoll: null,
+    currentHp: 50,
+    abilities: ["Burn", "Shine"]
   },
   {
     id: 'mourningrosary',
     name: 'Mourning Rosary',
     isEnemy: false,
     stats: { hp: 50, atk: 20, def: 5, spd: 10},
-    lastRoll: null
+    lastRoll: null,
+    currentHp: 50,
+    abilities: ["Mantra", "Prayer"]
   },
   {
     id: 'deada',
     name: 'Dead A',
     isEnemy: true,
     stats: { hp: 100, atk: 10, def: 10, spd: 10, exp: 5},
-    lastRoll: null
+    lastRoll: null,
+    currentHp: 100,
   },
   {
     id: 'deadb',
     name: 'Dead B',
     isEnemy: true,
     stats: { hp: 100, atk: 10, def: 10, spd: 10, exp: 5},
-    lastRoll: null
+    lastRoll: null,
+    currentHp: 100,
   }
 ];
 
@@ -434,7 +592,6 @@ const gameFunctions = {
       return withTiebreak.map(c => c.id);
     }
   },
-
   basicAttack: {
     label: 'Basic Attack (example)',
     description: 'damage = attacker.atk + d6 roll − defender.def, minimum 0. Uses first ally vs first enemy as a sample.',
@@ -490,6 +647,71 @@ function logToFeed(message, opts = {}) {
   feed.scrollTop = feed.scrollHeight;
 }
 
+function targetSelect() {
+  return new Promise(resolve => {
+    const feed = document.getElementById('feed');
+    const empty = feed.querySelector('.feed-empty');
+    if (empty) empty.remove();
+
+    const entry = document.createElement('div');
+    entry.className = 'feed-entry';
+    entry.id = gameState.round + 'target-select';
+    characters.forEach(char => {
+      const btn = document.createElement('button');
+      btn.className = 'choice-btn'
+      btn.textContent = char.name;
+      btn.id = char.id
+      btn.addEventListener("click", (event) => {
+        resolve(char.id);
+      });
+      entry.appendChild(btn);
+    })
+    feed.appendChild(entry);
+    feed.scrollTop = feed.scrollHeight;
+  });
+}
+
+function actionSelect(options) {
+  return new Promise(resolve => {
+    const feed = document.getElementById('feed');
+    const empty = feed.querySelector('.feed-empty');
+    if (empty) empty.remove();
+
+    const entry = document.createElement('div');
+    entry.className = 'feed-entry';
+    entry.id = gameState.round + 'option-select';
+    options.forEach((option, index) => {
+      const btn = document.createElement('button');
+      btn.className = 'choice-btn'
+      btn.textContent = option;
+      btn.id = index
+      btn.addEventListener("click", (event) => {
+        resolve(index);
+      });
+      entry.appendChild(btn);
+    })
+    feed.appendChild(entry);
+    feed.scrollTop = feed.scrollHeight;
+  });
+}
+
+function calculateResults(activeCharObj, actionIndex, targetObj){
+  return new Promise(resolve => {
+    let outcome = activeCharObj.name + " used " + activeCharObj.abilities[actionIndex] + " on " + targetObj.name;
+    let roll = rollDie();
+    switch (activeCharObj.abilities[actionIndex]) {
+      case "Attack":
+        let attackDmg = Math.round(activeCharObj.stats.atk + (activeCharObj.stats.atk * (roll/6)) - targetObj.stats.def)
+        targetObj.currentHp = targetObj.currentHp - attackDmg;
+        outcome += ". " + attackDmg + " damage.";
+        break;
+      default:
+        outcome += ". There was no effect."
+    }
+    resolve(outcome);
+  });
+}
+
 /* ============================================================
    RENDER: CHARACTER CARDS
    ============================================================ */
@@ -532,6 +754,27 @@ function renderCharacterCards() {
 }
 
 /* ============================================================
+   RENDER: GAME TAB ROSTER (compact, HP-only cards)
+   ============================================================ */
+function renderGameRoster() {
+  const container = document.getElementById('gameRoster');
+  container.innerHTML = '';
+
+  characters.forEach(char => {
+    const pct = Math.max(0, Math.min(100, (char.currentHp / char.stats.hp) * 100));
+    const card = document.createElement('div');
+    card.className = `mini-card ${char.isEnemy ? 'enemy' : 'ally'}${char.isDead ? ' dead' : ''}`;
+    card.innerHTML = `
+      ${char.isDead ? '<span class="dead-badge">Dead</span>' : ''}
+      <div class="mini-card-name">${char.name}</div>
+      <div class="hp-bar-track"><div class="hp-bar-fill" style="width:${pct}%"></div></div>
+      <div class="hp-text">${char.currentHp} / ${char.stats.hp} HP</div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+/* ============================================================
    RENDER: FUNCTION CARDS
    ============================================================ */
 function renderFunctionCards() {
@@ -568,50 +811,71 @@ function renderFunctionCards() {
    GAME TAB LOGIC
    ============================================================ */
 function startGame() {
-  gameState.round = 1;
-  gameState.started = true;
+  if (!gameState.started) {
+    gameState.round = 1;
+    gameState.started = true;
 
-  const orderResult = gameFunctions.turnOrder.run(characters);
-  gameState.turnOrder = orderResult;
-  console.log(gameState.turnOrder);
+    const orderResult = gameFunctions.turnOrder.run(characters);
+    gameState.turnOrder = orderResult;
+      
+    updateTurnOrderDisplay();
 
-  document.getElementById('turnOrderDisplay').innerHTML =
-    `<strong>Turn order:</strong> ${orderResult.map(o => o.split(' (')[0]).join(' → ')}`;
+    logToFeed('Game started.', { round: gameState.round });
 
-  logToFeed('Game started.', { round: gameState.round });
-  orderResult.forEach(line => logToFeed(line, { round: gameState.round }));
-
-  renderCharacterCards();
+    renderCharacterCards();
+    renderGameRoster();
+  }
 }
 
-function rollRound() {
+function updateTurnOrderDisplay () {
+  let listHTML = '';
+  let characterList = gameState.turnOrder.forEach((turnChar, index) => {
+    let charObj = characters.find(char => char.id == turnChar);
+    listHTML += gameState.turn == index ? ' <u><b>' + charObj.name + '</b></u>' : ' ' + charObj.name;
+    listHTML += index < (characters.length - 1) ? ' →' : '';
+  })
+  document.getElementById('turnOrderDisplay').innerHTML = '<strong>Turn order:</strong>' + listHTML;
+}
+
+async function rollRound() {
   if (!gameState.started) {
     logToFeed('Click "Start Game" first to set turn order.', { round: gameState.round });
     return;
   }
 
+  // get the current character
+  let activeCharObj = characters.find(char => char.id == gameState.turnOrder[gameState.turn]);
 
+  if (activeCharObj.isEnemy) {
+    // run enemy attack
+  } else {
+    const action = await actionSelect(activeCharObj.abilities);
+    document.getElementById(gameState.round + 'option-select').innerHTML = activeCharObj.name + " uses <b>" + activeCharObj.abilities[action] +"</b>";
+    const targetID = await targetSelect();
+    const targetObj = characters.find(char => char.id == targetID);
+    document.getElementById(gameState.round + 'target-select').innerHTML = "<b>" + targetObj.name +"</b> targeted";
+    const outcome = await calculateResults(activeCharObj, action, targetObj);
+    logToFeed(outcome, { round: gameState.round });
+  }
+  // select 
 
-  // Placeholder round logic — replace with your real per-round rules.
-  // This currently just runs the example basic attack function so
-  // there is something visible to click through while prototyping.
-
-
-  const result = gameFunctions.basicAttack.run(characters);
-  result.forEach(line => logToFeed(line, { round: gameState.round }));
+  // const result = gameFunctions.basicAttack.run(characters);
+  // result.forEach(line => logToFeed(line, { round: gameState.round }));
 
   gameState.round += 1;
-  gameState.turn = gameState.turn < 4 ? gameState.turn + 1 : 0;
+  gameState.turn = gameState.turn < (characters.length - 1) ? gameState.turn + 1 : 0;
   renderCharacterCards();
-  console.log(gameState.turn);
+  renderGameRoster();
+  updateTurnOrderDisplay();
 }
 
 function resetGame() {
-  gameState = { round: 0, turnOrder: [], started: false };
+  gameState = { round: 0, turnOrder: [], started: false, turn: 0 };
   document.getElementById('turnOrderDisplay').innerHTML =
     'Turn order not set yet. Click <strong>Start Game</strong>.';
   document.getElementById('feed').innerHTML = '<div class="feed-empty">Game log will appear here...</div>';
   characters.forEach(c => c.lastRoll = null);
+  renderGameRoster();
   renderCharacterCards();
 }
 
@@ -635,6 +899,7 @@ function setupTabs() {
 function init() {
   renderCharacterCards();
   renderFunctionCards();
+  renderGameRoster();
   setupTabs();
 
   document.getElementById('startGameBtn').addEventListener('click', startGame);
